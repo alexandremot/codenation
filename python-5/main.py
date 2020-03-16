@@ -20,12 +20,21 @@ def classify_by_phone_number(records):
     pass
 
 
-def test(records):
-    for i in range(len(records)): 
-        start_time = datetime.fromtimestamp(records[i]['start'])
-        end_time = datetime.fromtimestamp(records[i]['end'])
-        print(str(start_time) + " | " + str(end_time))
+def calculate_billing(records):
+
+    billing_list = []
+
+    for i, each in enumerate(records):
+        start = each['start']
+        end = each['end']
+
+        # elapsed_time = time.append(end - start)
+        start_hour = datetime.fromtimestamp(start).hour
+
+        if start_hour >= 6 and start_hour <= 22:
+            print(str(i) + " its billing!")
+    return None
 
 
 if __name__ == "__main__":
-    test(records)
+    a = calculate_billing(records)
