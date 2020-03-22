@@ -20,21 +20,27 @@ def classify_by_phone_number(records):
     pass
 
 
-def calculate_billing(records):
-
-    billing_list = []
+def retorna_valores(records):
+    lista_de_valores = []
+    encargo_permanente = 0.36
+    taxa_por_minuto = 0.09
 
     for i, each in enumerate(records):
         start = each['start']
         end = each['end']
 
-        # elapsed_time = time.append(end - start)
-        start_hour = datetime.fromtimestamp(start).hour
+        tempo_decorrido = end - start
+        horario_inicio = datetime.fromtimestamp(start).hour
+        horario_fim = datetime.fromtimestamp(end).hour
 
-        if start_hour >= 6 and start_hour <= 22:
-            print(str(i) + " its billing!")
-    return None
+        if horario_inicio >= 6 and horario_inicio <= 22:
+            lista_de_valores.append(encargo_permanente +
+                                    taxa_por_minuto * tempo_decorrido)
+        else:
+            lista_de_valores.append(encargo_permanente)
+    return lista_de_valores
 
 
 if __name__ == "__main__":
-    a = calculate_billing(records)
+    a = retorna_valores(records)
+    print(a)
