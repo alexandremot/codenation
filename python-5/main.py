@@ -36,9 +36,12 @@ records = [
      'end': 1564505021, 'start': 1564504821},
 
     {'source': '48-996383697', 'destination': '41-885633788',
-     'end': 1564626000, 'start': 1564647600},
+     'end': 1564626000, 'start': 1564647600}
+]
 
-    # valores fake:
+
+fake = [
+    # dicionario com valores fake para teste de limites:
     # iniciada antes das 06h00 e finalizada apos as 06h00
     {'source': '48-996383697', 'destination': '41-885633788',
      'end': 1564563780, 'start': 1564563300},
@@ -46,15 +49,46 @@ records = [
     # iniciada antes das 22h00 e finalizada apos as 22h00
     {'source': '48-996383697', 'destination': '41-885633788',
      'end': 1564621500, 'start': 1564620900}
-    # ------------
-]
+     ]
+
+
+# variáveis globais
+encargo_permanente = 0.36
+taxa_por_minuto = 0.09
 
 
 def classify_by_phone_number(records):
     pass
 
 
-def get_charging_time(records):
+def get_inicio_termino_cobranca(start_time):
+    '''
+     retorna a concatenação do horário das 06h00 e das 22h00 com
+     o dia específico no formato unix timestamp
+    '''
+    inicio_termino_cobranca = []
+    time_string = datetime.fromtimestamp(start_time).strftime('%d%m%Y%H%M%S')
+
+    for i in range(2):
+        limit = 6 if i == 0 else 22
+        # formato de 't': (year, month, day, hour, min, sec, 0, 0, 0)
+        t = (int(time_string[4:8]), int(time_string[2:4]),
+             int(time_string[0:2]), limit, 00, 00, 0, 0, 0)
+        inicio_termino_cobranca.append(time.mktime(t))
+    return tuple(inicio_termino_cobranca)
+
+
+def calcula_custo(duracao_ligacao):
+    '''
+     retorna o custo da ligação, dada a duração em minutos, como
+     parâmetro de entrada
+    '''
+    custo = encargo_permanente + (duracao_ligacao * taxa_por_minuto)
+    custo = round(custo, 2)
+    return custo
+
+
+def get_lista_custo_total(records):
     '''
      função :
      1.  obtem o dicionario contendo todos os dados de chamadas
@@ -62,67 +96,52 @@ def get_charging_time(records):
      3.  calcula os tempos de cobrança de acordo com a faixa horária
     '''
 
-    encargo_permanente = 0.36
-    taxa_por_minuto = 0.09
     charging_list = []
 
     # obtem o timestamp do horario das 06h00 e das 22h00 para o dia especifico
-    billing_limits = get_billing_limits(records[0]['start'])
+    inicio_termino_cobranca = get_inicio_termino_cobranca(records[0]['start'])
 
     # itera entre  os itens do dicionario
-    for i, each in enumerate(records):
-        start = each['start']
-        end = each['end']
+    for i, dict_item in enumerate(records):
+        inicio = dict_item['start']
+        termino = dict_item['end']
 
-        horario_inicio = datetime.fromtimestamp(start).hour
-        horario_termino = datetime.fromtimestamp(end).hour
+        # obtem o dia de início e término da ligação
+        dia_inicio = datetime.fromtimestamp(inicio).day
+        dia_termino = datetime.fromtimestamp(termino).day
+
+        # considera apenas ligações que iniciam e terminam no mesmo dia
+        if dia_inicio != dia_termino:
+            break
+
+        # obtem os horários de início e de término da ligação
+        horario_inicio = datetime.fromtimestamp(inicio).hour
+        horario_termino = datetime.fromtimestamp(termino).hour
 
         if horario_inicio < 6 and horario_termino >= 6:
             # chamada iniciada antes das 06h00 e finalizada após as 06h00
-            tempo_cobranca = (end - billing_limits[0])/60
-            result = encargo_permanente + (tempo_cobranca * taxa_por_minuto)
-            result = round(result, 2)
-            charging_list.append(result)
+            tempo_cobranca = (termino - inicio_termino_cobranca[0])/60
+            custo = calcula_custo(tempo_cobranca)
 
         elif horario_inicio < 22 and horario_termino >= 22:
             # chamada iniciada antes das 22h00 e finalizada após as 22h00
-            tempo_cobranca = (billing_limits[1] - start)/60
-            result = encargo_permanente + (tempo_cobranca * taxa_por_minuto)
-            result = round(result, 2)
-            charging_list.append(result)
+            tempo_cobranca = (inicio_termino_cobranca[1] - inicio)/60
+            custo = calcula_custo(tempo_cobranca)
 
         elif horario_inicio >= 6 and horario_inicio <= 22:
             # chamada ocorrida durante o horário de cobrança
-            tempo_cobranca = (end - start)/60
-            result = encargo_permanente + (tempo_cobranca * taxa_por_minuto)
-            result = round(result, 2)
-            charging_list.append(result)
+            tempo_cobranca = (termino - inicio)/60
+            custo = calcula_custo(tempo_cobranca)
 
+        else:
+            # chamada ocorrida entre 22h01 e 05h59 (sem cobrança por minuto)
+            tempo_cobranca = (termino - inicio)/60
+            custo = encargo_permanente
+
+        charging_list.append(custo)
     return charging_list
 
 
-def get_billing_limits(start_time):
-    '''
-     retorna a concatenação do horário das 06h00 e das 22h00 com
-     o dia específico no formato unix timestamp para entao ser
-     computado no cálculo do tempo de cobrança (dentro deste limite)
-    '''
-    billing_limits = []
-
-    time_string = datetime.fromtimestamp(start_time).strftime('%d%m%Y%H%M%S')
-
-    for i in range(2):
-        limit = 6 if i == 0 else 22
-        # t = (YYYY, m, dd, HH, MM, S, 0, 0, 0)
-        t = (int(time_string[4:8]), int(time_string[2:4]),
-             int(time_string[0:2]), limit, 00, 00, 0, 0, 0)
-        billing_limits.append(time.mktime(t))
-
-    return tuple(billing_limits)
-
-
 if __name__ == "__main__":
-    # a = get_billing_time(records[0]['start'])
-    a = get_charging_time(records)
+    a = get_lista_custo_total(records)
     print(a)
-    print(len(a))
