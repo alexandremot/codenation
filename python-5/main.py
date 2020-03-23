@@ -112,33 +112,33 @@ def get_lista_custo_total(records):
 
         # considera apenas ligações que iniciam e terminam no mesmo dia
         if dia_inicio != dia_termino:
-            break
-
-        # obtem os horários de início e de término da ligação
-        horario_inicio = datetime.fromtimestamp(inicio).hour
-        horario_termino = datetime.fromtimestamp(termino).hour
-
-        if horario_inicio < 6 and horario_termino >= 6:
-            # chamada iniciada antes das 06h00 e finalizada após as 06h00
-            tempo_cobranca = (termino - inicio_termino_cobranca[0])/60
-            custo = calcula_custo(tempo_cobranca)
-
-        elif horario_inicio < 22 and horario_termino >= 22:
-            # chamada iniciada antes das 22h00 e finalizada após as 22h00
-            tempo_cobranca = (inicio_termino_cobranca[1] - inicio)/60
-            custo = calcula_custo(tempo_cobranca)
-
-        elif horario_inicio >= 6 and horario_inicio <= 22:
-            # chamada ocorrida durante o horário de cobrança
-            tempo_cobranca = (termino - inicio)/60
-            custo = calcula_custo(tempo_cobranca)
-
+            pass
         else:
-            # chamada ocorrida entre 22h01 e 05h59 (sem cobrança por minuto)
-            tempo_cobranca = (termino - inicio)/60
-            custo = encargo_permanente
+            # obtem os horários de início e de término da ligação
+            horario_inicio = datetime.fromtimestamp(inicio).hour
+            horario_termino = datetime.fromtimestamp(termino).hour
 
-        charging_list.append(custo)
+            if horario_inicio < 6 and horario_termino >= 6:
+                # chamada iniciada antes das 06h00 e finalizada após as 06h00
+                tempo_cobranca = (termino - inicio_termino_cobranca[0])/60
+                custo = calcula_custo(tempo_cobranca)
+
+            elif horario_inicio < 22 and horario_termino >= 22:
+                # chamada iniciada antes das 22h00 e finalizada após as 22h00
+                tempo_cobranca = (inicio_termino_cobranca[1] - inicio)/60
+                custo = calcula_custo(tempo_cobranca)
+
+            elif horario_inicio >= 6 and horario_inicio <= 22:
+                # chamada ocorrida durante o horário de cobrança
+                tempo_cobranca = (termino - inicio)/60
+                custo = calcula_custo(tempo_cobranca)
+
+            else:
+                # chamada ocorrida entre 22h01 e 05h59 (sem cobrança por min)
+                tempo_cobranca = (termino - inicio)/60
+                custo = encargo_permanente
+
+            charging_list.append(custo)
     return charging_list
 
 
