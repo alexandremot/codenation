@@ -4,53 +4,29 @@ from datetime import datetime
 records = [
     {'source': '48-996355555', 'destination': '48-666666666',
      'end': 1564610974, 'start': 1564610674},
-
     {'source': '41-885633788', 'destination': '41-886383097',
      'end': 1564506121, 'start': 1564504821},
-
     {'source': '48-996383697', 'destination': '41-886383097',
      'end': 1564630198, 'start': 1564629838},
-
     {'source': '48-999999999', 'destination': '41-885633788',
      'end': 1564697158, 'start': 1564696258},
-
     {'source': '41-833333333', 'destination': '41-885633788',
      'end': 1564707276, 'start': 1564704317},
-
     {'source': '41-886383097', 'destination': '48-996384099',
      'end': 1564505621, 'start': 1564504821},
-
     {'source': '48-999999999', 'destination': '48-996383697',
      'end': 1564505721, 'start': 1564504821},
-
     {'source': '41-885633788', 'destination': '48-996384099',
      'end': 1564505721, 'start': 1564504821},
-
     {'source': '48-996355555', 'destination': '48-996383697',
      'end': 1564505821, 'start': 1564504821},
-
     {'source': '48-999999999', 'destination': '41-886383097',
      'end': 1564610750, 'start': 1564610150},
-
     {'source': '48-996383697', 'destination': '41-885633788',
      'end': 1564505021, 'start': 1564504821},
-
     {'source': '48-996383697', 'destination': '41-885633788',
      'end': 1564626000, 'start': 1564647600}
 ]
-
-
-fake = [
-    # dicionario com valores fake para teste de limites:
-    # iniciada antes das 06h00 e finalizada apos as 06h00
-    {'source': '48-996383697', 'destination': '41-885633788',
-     'end': 1564563780, 'start': 1564563300},
-
-    # iniciada antes das 22h00 e finalizada apos as 22h00
-    {'source': '48-996383697', 'destination': '41-885633788',
-     'end': 1564621500, 'start': 1564620900}
-     ]
-
 
 # variáveis globais
 encargo_permanente = 0.36
@@ -64,7 +40,8 @@ def classify_by_phone_number(records):
 def get_inicio_termino_cobranca(start_time):
     '''
      retorna a concatenação do horário das 06h00 e das 22h00 com
-     o dia específico no formato unix timestamp
+     o dia específico no formato unix timestamp (para calculo dos
+     custos)
     '''
     inicio_termino_cobranca = []
     time_string = datetime.fromtimestamp(start_time).strftime('%d%m%Y%H%M%S')
@@ -95,7 +72,7 @@ def get_lista_custo_total(records):
      2.  extrai os dados de inicio e fim da chamada em unix timestamp
      3.  calcula os tempos de cobrança de acordo com a faixa horária
     '''
-
+    dict = {'source': '', 'total': ''}
     charging_list = []
 
     # obtem o timestamp do horario das 06h00 e das 22h00 para o dia especifico
@@ -103,6 +80,7 @@ def get_lista_custo_total(records):
 
     # itera entre  os itens do dicionario
     for i, dict_item in enumerate(records):
+        dict['source'] = dict_item['source']
         inicio = dict_item['start']
         termino = dict_item['end']
 
@@ -138,7 +116,10 @@ def get_lista_custo_total(records):
                 tempo_cobranca = (termino - inicio)/60
                 custo = encargo_permanente
 
-            charging_list.append(custo)
+            dict['total'] = custo
+            charging_list.append(dict)
+            # reseta o dicionario após operações
+            dict = {key: '' for key in dict}
     return charging_list
 
 
