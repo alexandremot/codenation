@@ -1,5 +1,6 @@
 import time
 from datetime import datetime
+from operator import itemgetter
 
 records = [
     {'source': '48-996355555', 'destination': '48-666666666',
@@ -31,13 +32,18 @@ records = [
 # variáveis globais
 encargo_permanente = 0.36
 taxa_por_minuto = 0.09
+slices = []
+totals = []
+values = []
+source_list = []
+lista_com_totais = []
 
 
 def classify_by_phone_number(records):
     pass
 
 
-def get_inicio_termino_cobranca(start_time):
+def computa_cobranca(start_time):
     '''
      retorna a concatenação do horário das 06h00 e das 22h00 com
      o dia específico no formato unix timestamp (para calculo dos
@@ -55,30 +61,30 @@ def get_inicio_termino_cobranca(start_time):
     return tuple(inicio_termino_cobranca)
 
 
-def calcula_custo(duracao_ligacao):
+def calcula_custo_de_ligacao(duracao_ligacao):
     '''
-     retorna o custo da ligação, dada a duração em minutos, como
+     retorna o custo da ligação, dada a duração em minutos como
      parâmetro de entrada
     '''
-    custo = encargo_permanente + (duracao_ligacao * taxa_por_minuto)
-    custo = round(custo, 2)
-    return custo
+    custo_ligacao = encargo_permanente + (duracao_ligacao * taxa_por_minuto)
+    custo_ligacao = round(custo_ligacao, 2)
+    return custo_ligacao
 
 
-def get_lista_custo_total(records):
+def calcula_custos_totais(records):
     '''
      função :
-     1.  obtem o dicionario contendo todos os dados de chamadas
+     1.  obtem a lista contendo todos os dados de chamadas (records)
      2.  extrai os dados de inicio e fim da chamada em unix timestamp
      3.  calcula os tempos de cobrança de acordo com a faixa horária
     '''
     dict = {'source': '', 'total': ''}
-    charging_list = []
+    lista_custos_totais = []
 
     # obtem o timestamp do horario das 06h00 e das 22h00 para o dia especifico
-    inicio_termino_cobranca = get_inicio_termino_cobranca(records[0]['start'])
+    inicio_termino_cobranca = computa_cobranca(records[0]['start'])
 
-    # itera entre  os itens do dicionario
+    # itera entre os itens do dicionario
     for i, dict_item in enumerate(records):
         dict['source'] = dict_item['source']
         inicio = dict_item['start']
@@ -99,17 +105,17 @@ def get_lista_custo_total(records):
             if horario_inicio < 6 and horario_termino >= 6:
                 # chamada iniciada antes das 06h00 e finalizada após as 06h00
                 tempo_cobranca = (termino - inicio_termino_cobranca[0])/60
-                custo = calcula_custo(tempo_cobranca)
+                custo = calcula_custo_de_ligacao(tempo_cobranca)
 
             elif horario_inicio < 22 and horario_termino >= 22:
                 # chamada iniciada antes das 22h00 e finalizada após as 22h00
                 tempo_cobranca = (inicio_termino_cobranca[1] - inicio)/60
-                custo = calcula_custo(tempo_cobranca)
+                custo = calcula_custo_de_ligacao(tempo_cobranca)
 
             elif horario_inicio >= 6 and horario_inicio <= 22:
                 # chamada ocorrida durante o horário de cobrança
                 tempo_cobranca = (termino - inicio)/60
-                custo = calcula_custo(tempo_cobranca)
+                custo = calcula_custo_de_ligacao(tempo_cobranca)
 
             else:
                 # chamada ocorrida entre 22h01 e 05h59 (sem cobrança por min)
@@ -117,12 +123,76 @@ def get_lista_custo_total(records):
                 custo = encargo_permanente
 
             dict['total'] = custo
-            charging_list.append(dict)
+            lista_custos_totais.append(dict)
             # reseta o dicionario após operações
             dict = {key: '' for key in dict}
-    return charging_list
+    return lista_custos_totais
+
+
+def ordena_lista(dict_list):
+
+    lista_ordenada_por_source = sorted(dict_list, key=itemgetter('source'))
+
+    for item in lista_ordenada_por_source:
+        source_list.append(item['source'])
+        lista_com_totais.append(item['total'])
+        sources_agrupados = list(dict.fromkeys(source_list))
+    return lista_ordenada_por_source, lista_com_totais, sources_agrupados
+
+
+def itens_repetidos_index(tuple):
+    '''
+     monta lista com relação dos itens repetidos
+    '''
+    records_list = tuple[0]
+    source_unicos = tuple[2]
+
+    for each in source_unicos:
+        values.append([i for i, x in enumerate(records_list)
+                      if records_list[i]['source'] == each])
+
+    return values
+
+
+def calcula_soma_dos_totais(values, tuple):
+
+    source_unicos = tuple[2]
+    records_list = tuple[0]
+
+    for i, each in enumerate(source_unicos):
+        totals.append([])
+        x = values[i][0] + len(values[i])
+        slices.append(records_list[values[i][0]:x])
+    values = []
+
+    for i, each in enumerate(slices):
+        for any in each:
+            totals[i].append(any['total'])
+
+    for each in totals:
+        values.append(sum(each))
+
+    return values
+
+
+def formata_dados(source, totais):
+    '''
+     gera dicionário a partir dos dados de source e totais
+     ordenado do menor para o maior valor total
+    '''
+    return list(zip(source[2], totais))
 
 
 if __name__ == "__main__":
-    a = get_lista_custo_total(records)
-    print(a)
+    # converte timestamp e calcula custos
+    lista_contendo_custos_totais = calcula_custos_totais(records)
+    # organiza a lista pelo source
+    lista_valores = ordena_lista(lista_contendo_custos_totais)
+    # organiza a lista agrupando source repetidos
+    index = itens_repetidos_index(lista_valores)
+    # soma todos os totais de source agrupados
+    index = calcula_soma_dos_totais(index, lista_valores)
+    # formata a lista para apresentação final
+    result_list = formata_dados(lista_valores, index)
+    # imprime o resultado
+    print(result_list)
